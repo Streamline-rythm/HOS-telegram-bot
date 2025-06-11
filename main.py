@@ -56,12 +56,12 @@ async def get_replied_message(
         reply = last_reply.get(message_id)
         if reply:
             return reply
-        await asyncio.sleep(1)  # Wait and retry
+        await asyncio.sleep(1)  
+        # Wait and retry
+        
+@app.get("/test")
+async def test():
+    return {"result": "success"}
 
 if __name__ == "__main__":
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8080, proxy_headers=True)
