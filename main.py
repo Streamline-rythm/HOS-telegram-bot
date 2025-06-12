@@ -54,14 +54,27 @@ async def get_replied_message(
 ):
     while True:
         reply = last_reply.get(message_id)
-        if reply:
+        if reply and "Checking" in reply["text"]:
+            # print(f"last_reply: {last_reply}")
             return reply
-        await asyncio.sleep(1)  
+        await asyncio.sleep(2)  
         # Wait and retry
         
+@app.get("/get_replied_message_again")
+async def get_replied_message_again(
+    message_id: int = Query(..., description="The ID of the message"),
+    previous_reply_message_content: str = Query(..., description="The Checking message")
+):
+    while True:
+        reply = last_reply.get(message_id)
+        if reply and reply.get("text") != previous_reply_message_content:
+            return reply
+        await asyncio.sleep(2)  
+        # Wait and retry
+
 @app.get("/test")
 async def test():
     return {"result": "success"}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080, proxy_headers=True)
+    uvicorn.run(app, host="0.0.0.0", port=8080, proxy_headers=True,)
