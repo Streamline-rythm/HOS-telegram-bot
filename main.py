@@ -54,7 +54,7 @@ async def get_replied_message(
 ):
     while True:
         reply = last_reply.get(message_id)
-        if reply and "Checking" in reply["text"]:
+        if reply and "checking" in reply["text"].lower():
             # print(f"last_reply: {last_reply}")
             return reply
         await asyncio.sleep(2)  
