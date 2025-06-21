@@ -63,7 +63,6 @@ async def get_replied_message(
 @app.get("/get_replied_message_again")
 async def get_replied_message_again(
     message_id: int = Query(..., description="The ID of the message"),
-    previous_reply_message_content: str = Query(..., description="The Checking message")
 ):
     while True:
         reply = last_reply.get(message_id)
