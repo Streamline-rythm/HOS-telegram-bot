@@ -67,7 +67,7 @@ async def get_replied_message_again(
 ):
     while True:
         reply = last_reply.get(message_id)
-        if reply and reply.get("text") != previous_reply_message_content:
+        if reply and "checking" not in reply["text"].lower():
             return reply
         await asyncio.sleep(2)  
         # Wait and retry
