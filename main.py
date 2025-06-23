@@ -52,24 +52,30 @@ app = FastAPI(
 async def get_replied_message(
     message_id: int = Query(..., description="The ID of the message")
 ):
-    while True:
+    for i in range(120):
         reply = last_reply.get(message_id)
         if reply and "checking" in reply["text"].lower():
             # print(f"last_reply: {last_reply}")
             return reply
-        await asyncio.sleep(2)  
+        await asyncio.sleep(1)  
         # Wait and retry
-        
+    return {
+        "text": "not found"
+    }
+
 @app.get("/get_replied_message_again")
 async def get_replied_message_again(
     message_id: int = Query(..., description="The ID of the message"),
 ):
-    while True:
+    for i in range(10):
         reply = last_reply.get(message_id)
         if reply and "checking" not in reply["text"].lower():
             return reply
         await asyncio.sleep(2)  
         # Wait and retry
+    return {
+        "text": "not found"
+    }
 
 @app.get("/test")
 async def test():
