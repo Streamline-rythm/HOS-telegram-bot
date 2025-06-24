@@ -80,23 +80,23 @@ async def get_replied_message(first_data_from_scenario: FirstDataFromScenario):
             }
 
             requests.post(url='https://hook.us2.make.com/vqinhxh6v9m8cf7yuhdeqrdxotvl3k7f', json=body)
-            
+
         await asyncio.sleep(3)  
         # Wait and retry
 
-@app.get("/get_replied_message_again")
-async def get_replied_message_again(
-    message_id: int = Query(..., description="The ID of the message"),
-):
-    for i in range(10):
-        reply = last_reply.get(message_id)
-        if reply and "checking" not in reply["text"].lower():
-            return reply
-        await asyncio.sleep(2)  
-        # Wait and retry
-    return {
-        "text": "not found"
-    }
+# @app.get("/get_replied_message_again")
+# async def get_replied_message_again(
+#     message_id: int = Query(..., description="The ID of the message"),
+# ):
+#     for i in range(10):
+#         reply = last_reply.get(message_id)
+#         if reply and "checking" not in reply["text"].lower():
+#             return reply
+#         await asyncio.sleep(2)  
+#         # Wait and retry
+#     return {
+#         "text": "not found"
+#     }
 
 @app.get("/test")
 async def test():
