@@ -1,10 +1,12 @@
 import os
 import uvicorn
-from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-from fastapi import FastAPI, HTTPException, Query
 import asyncio
+import requests
+from fastapi import FastAPI
+from telegram import Update
+from dotenv import load_dotenv
+from pydantic import BaseModel
+from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from contextlib import asynccontextmanager
 
 # Load environment variables
@@ -16,6 +18,13 @@ if not BOT_TOKEN:
 
 # Store the last reply in memory (for demo purposes)
 last_reply = {}
+
+class FirstDataFromScenario(BaseModel):
+    "message_id": str,
+    "name": str,
+    "phone_number": str,
+    "thread_id": str,
+    "airtable_record_id": str
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.reply_to_message:
@@ -48,20 +57,32 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-@app.get("/get_replied_message")
-async def get_replied_message(
-    message_id: int = Query(..., description="The ID of the message")
-):
-    for i in range(120):
+@app.post("/get_replied_message")
+async def get_replied_message(first_data_from_scenario: FirstDataFromScenario):
+    message_id = first_data_from_scenario["message_id"]
+    name = first_data_from_scenario["name"]
+    phone_number = first_data_from_scenario["phone_number"]
+    thread_id = first_data_from_scenario["thread_id"]
+    airtable_record_id = first_data_from_scenario["airtable_record_id"]
+
+    while(True):
         reply = last_reply.get(message_id)
         if reply and "checking" in reply["text"].lower():
             # print(f"last_reply: {last_reply}")
-            return reply
-        await asyncio.sleep(1)  
+            telegram_content = reply["text"]
+            body = {
+                "message_id": message_id,
+                "telegram_content": telegram_content,
+                "name": name,
+                "phone_number": phone_number,
+                "thread_id": thread_id,
+                "airtable_record_id": airtable_record_id
+            }
+
+            requests.post(url='https://hook.us2.make.com/vqinhxh6v9m8cf7yuhdeqrdxotvl3k7f', json=body)
+            
+        await asyncio.sleep(3)  
         # Wait and retry
-    return {
-        "text": "not found"
-    }
 
 @app.get("/get_replied_message_again")
 async def get_replied_message_again(
