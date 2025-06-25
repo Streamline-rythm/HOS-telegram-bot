@@ -2,7 +2,7 @@ import os
 import uvicorn
 import asyncio
 import requests
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks
 from telegram import Update
 from dotenv import load_dotenv
 from pydantic import BaseModel
@@ -25,13 +25,15 @@ class FirstDataFromScenario(BaseModel):
     phone_number: str
     thread_id: str
     airtable_record_id: str
+    chat_id: str
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.reply_to_message:
+        chat_id = update.message.chat_id
         replied_id = update.message.reply_to_message.message_id
         user = update.message.from_user.full_name
         reply_text = update.message.text
-        last_reply[replied_id] = {"user": user, "text": reply_text}
+        last_reply[chat_id] = {replied_id: {"user": user, "text": reply_text}}
 
 # Start the bot in the background
 async def start_bot():
@@ -57,18 +59,17 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-@app.post("/get_replied_message")
-async def get_replied_message(first_data_from_scenario: FirstDataFromScenario):
-    print(f"first_data_from_scenario: {first_data_from_scenario}")
-    
+def task_for_first_telegram_respond(first_data_from_scenario: FirstDataFromScenario):
     message_id = first_data_from_scenario.message_id
     name = first_data_from_scenario.name
     phone_number = first_data_from_scenario.phone_number
     thread_id = first_data_from_scenario.thread_id
     airtable_record_id = first_data_from_scenario.airtable_record_id
+    chat_id = first_data_from_scenario.chat_id
+    replies = last_reply.get(chat_id)
 
     while(True):
-        reply = last_reply.get(message_id)
+        reply = replies.get(message_id)
         if reply and "checking" in reply["text"].lower():
             print(f"last_reply: {last_reply}")
             telegram_content = reply["text"]
@@ -78,15 +79,19 @@ async def get_replied_message(first_data_from_scenario: FirstDataFromScenario):
                 "name": name,
                 "phone_number": phone_number,
                 "thread_id": thread_id,
-                "airtable_record_id": airtable_record_id
+                "airtable_record_id": airtable_record_id,
+                "chat_id": chat_id
             }
 
             requests.post(url='https://hook.us2.make.com/vqinhxh6v9m8cf7yuhdeqrdxotvl3k7f', json=body)
-            return {
-                "result": "success"
-            }
-        await asyncio.sleep(3)  
-        # Wait and retry
+        await asyncio.sleep(2)  
+
+@app.post("/get_replied_message")
+async def get_replied_message(first_data_from_scenario: FirstDataFromScenario, first_background_task: BackgroundTasks):
+    first_background_task.add_task(task_for_first_telegram_respond, first_data_from_scenario)
+    return
+    
+
 
 # @app.get("/get_replied_message_again")
 # async def get_replied_message_again(
