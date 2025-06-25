@@ -2,3 +2,7 @@
 .venv
 temp
 temp.json
+last_reply
+last_reply.json
+test
+test.py

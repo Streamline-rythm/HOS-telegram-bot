@@ -1,124 +1,59 @@
 import os
-import time
-import uvicorn
 import asyncio
 import requests
-from fastapi import FastAPI, BackgroundTasks
+import json
 from telegram import Update
 from dotenv import load_dotenv
-from pydantic import BaseModel
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-from contextlib import asynccontextmanager
 
-# Load environment variables
 load_dotenv()
 
+PERSISTENCE_FILE = "last_reply.json"
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN:
-    raise ValueError("BOT_TOKEN environment variable is not set")
+PERSONAL_TOKEN = os.getenv("PERSONAL_TOKEN")
+BASE_ID = os.getenv("BASE_ID")
+TABLE_ID = os.getenv("TABLE_ID")
 
-# Store the last reply in memory (for demo purposes)
-last_reply = {}
+BASE_URL = f'https://api.airtable.com/v0/{BASE_ID}/{TABLE_ID}'
 
-class FirstDataFromScenario(BaseModel):
-    message_id: str
-    name: str
-    phone_number: str
-    thread_id: str
-    airtable_record_id: str
-    chat_id: str
+headers = {
+    'Authorization': f'Bearer {PERSONAL_TOKEN}',
+    'Content-Type': 'application/json'
+}
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.reply_to_message:
-        chat_id = update.message.chat_id
-        replied_id = update.message.reply_to_message.message_id
-        user = update.message.from_user.full_name
         reply_text = update.message.text
-        last_reply[chat_id] = {replied_id: {"user": user, "text": reply_text}}
+        chat_id = str(update.message.chat_id)  # Use string keys for JSON compatibility
+        user = update.message.from_user.full_name
+        replied_id = str(update.message.reply_to_message.message_id)
 
-# Start the bot in the background
+        data = {
+            "fields": {
+                "chat_id": chat_id,
+                "user": user,
+                "replied_id": replied_id,
+                "chat_text": reply_text
+            }
+        }
+
+        response = requests.post(BASE_URL, headers=headers, data=json.dumps(data))
+        
+        if response.status_code == 200 or response.status_code == 201:
+            print("Record saved successfully!") 
+            print(response.json())
+        else:
+            print(f"Failed to save record: {response.status_code} - {response.text}")
+
 async def start_bot():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
-    application.add_handler(MessageHandler(filters.TEXT, handle_message))
+    application.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     await application.initialize()
     await application.start()
     await application.updater.start_polling()
-    await asyncio.Event().wait()
-
-# Define lifespan event handler
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    asyncio.create_task(start_bot())  # Start the bot
-    yield  # Wait here while the app runs
-    # Optionally: add any shutdown logic here
-
-# Create FastAPI app with lifespan
-app = FastAPI(
-    title="Telegram Message Retriever",
-    description="API to retrieve replied messages from Telegram",
-    version="1.0.0",
-    lifespan=lifespan
-)
-
-def task_for_first_telegram_respond(first_data_from_scenario: FirstDataFromScenario):
-    print("task for first telegram respond starts")
-    message_id = first_data_from_scenario.message_id
-    name = first_data_from_scenario.name
-    phone_number = first_data_from_scenario.phone_number
-    thread_id = first_data_from_scenario.thread_id
-    airtable_record_id = first_data_from_scenario.airtable_record_id
-    chat_id = first_data_from_scenario.chat_id
-    for i in range(600):
-        print(f"last_reply={last_reply}")
-        print("lopping!")
-        reply = None
-        replies ={}
-        if last_reply is not None:
-            replies = last_reply[chat_id]
-            print(f"replies= {replies}")
-        if replies is not None:
-            reply = replies[message_id]
-            print(f"reply={reply}")
-        if reply and "checking" in reply["text"].lower():
-            print(f"last_reply: {last_reply}")
-            telegram_content = reply["text"]
-            body = {
-                "message_id": message_id,
-                "telegram_content": telegram_content,
-                "name": name,
-                "phone_number": phone_number,
-                "thread_id": thread_id,
-                "airtable_record_id": airtable_record_id,
-                "chat_id": chat_id
-            }
-
-            requests.post(url='https://hook.us2.make.com/vqinhxh6v9m8cf7yuhdeqrdxotvl3k7f', json=body)
-        time.sleep(3)  
-
-@app.post("/get_replied_message")
-async def get_replied_message(first_data_from_scenario: FirstDataFromScenario, first_background_task: BackgroundTasks):
-    first_background_task.add_task(task_for_first_telegram_respond, first_data_from_scenario)
-    return
-    
-
-
-# @app.get("/get_replied_message_again")
-# async def get_replied_message_again(
-#     message_id: int = Query(..., description="The ID of the message"),
-# ):
-#     for i in range(10):
-#         reply = last_reply.get(message_id)
-#         if reply and "checking" not in reply["text"].lower():
-#             return reply
-#         await asyncio.sleep(2)  
-#         # Wait and retry
-#     return {
-#         "text": "not found"
-#     }
-
-@app.get("/test")
-async def test():
-    return {"result": "success"}
+    print("Bot started. Listening for messages...")
+    await asyncio.Event().wait()  # Keep running forever
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8080, proxy_headers=True,)
+    asyncio.run(start_bot())
