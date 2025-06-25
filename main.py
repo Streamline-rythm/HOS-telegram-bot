@@ -20,11 +20,11 @@ if not BOT_TOKEN:
 last_reply = {}
 
 class FirstDataFromScenario(BaseModel):
-    "message_id": str,
-    "name": str,
-    "phone_number": str,
-    "thread_id": str,
-    "airtable_record_id": str
+    message_id: str
+    name: str
+    phone_number: str
+    thread_id: str
+    airtable_record_id: str
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message and update.message.reply_to_message:
@@ -59,16 +59,18 @@ app = FastAPI(
 
 @app.post("/get_replied_message")
 async def get_replied_message(first_data_from_scenario: FirstDataFromScenario):
-    message_id = first_data_from_scenario["message_id"]
-    name = first_data_from_scenario["name"]
-    phone_number = first_data_from_scenario["phone_number"]
-    thread_id = first_data_from_scenario["thread_id"]
-    airtable_record_id = first_data_from_scenario["airtable_record_id"]
+    print(f"first_data_from_scenario: {first_data_from_scenario}")
+    
+    message_id = first_data_from_scenario.message_id
+    name = first_data_from_scenario.name
+    phone_number = first_data_from_scenario.phone_number
+    thread_id = first_data_from_scenario.thread_id
+    airtable_record_id = first_data_from_scenario.airtable_record_id
 
     while(True):
         reply = last_reply.get(message_id)
         if reply and "checking" in reply["text"].lower():
-            # print(f"last_reply: {last_reply}")
+            print(f"last_reply: {last_reply}")
             telegram_content = reply["text"]
             body = {
                 "message_id": message_id,
