@@ -82,7 +82,9 @@ async def get_replied_message(first_data_from_scenario: FirstDataFromScenario):
             }
 
             requests.post(url='https://hook.us2.make.com/vqinhxh6v9m8cf7yuhdeqrdxotvl3k7f', json=body)
-
+            return {
+                "result": "success"
+            }
         await asyncio.sleep(3)  
         # Wait and retry
 
