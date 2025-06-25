@@ -1,4 +1,5 @@
 import os
+import time
 import uvicorn
 import asyncio
 import requests
@@ -60,16 +61,24 @@ app = FastAPI(
 )
 
 def task_for_first_telegram_respond(first_data_from_scenario: FirstDataFromScenario):
+    print("task for first telegram respond starts")
     message_id = first_data_from_scenario.message_id
     name = first_data_from_scenario.name
     phone_number = first_data_from_scenario.phone_number
     thread_id = first_data_from_scenario.thread_id
     airtable_record_id = first_data_from_scenario.airtable_record_id
     chat_id = first_data_from_scenario.chat_id
-    replies = last_reply.get(chat_id)
-
-    while(True):
-        reply = replies.get(message_id)
+    for i in range(600):
+        print(f"last_reply={last_reply}")
+        print("lopping!")
+        reply = None
+        replies ={}
+        if last_reply is not None:
+            replies = last_reply[chat_id]
+            print(f"replies= {replies}")
+        if replies is not None:
+            reply = replies[message_id]
+            print(f"reply={reply}")
         if reply and "checking" in reply["text"].lower():
             print(f"last_reply: {last_reply}")
             telegram_content = reply["text"]
@@ -84,7 +93,7 @@ def task_for_first_telegram_respond(first_data_from_scenario: FirstDataFromScena
             }
 
             requests.post(url='https://hook.us2.make.com/vqinhxh6v9m8cf7yuhdeqrdxotvl3k7f', json=body)
-        await asyncio.sleep(2)  
+        time.sleep(3)  
 
 @app.post("/get_replied_message")
 async def get_replied_message(first_data_from_scenario: FirstDataFromScenario, first_background_task: BackgroundTasks):
